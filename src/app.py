@@ -9,7 +9,7 @@ con = MySQL(app)
 def lista_alumnos():
     try:
         cursor = con.connection.cursor()
-        sql = 'SELECT * FROM alumnos'
+        sql = 'SELECT * from alumnos order by nombre ASC'
         cursor.execute(sql)
         datos = cursor.fetchall()
 
@@ -34,9 +34,57 @@ def lista_alumnos():
             'exito': False
         })
 
-    finally:
-        # Cerrar el cursor para liberar recursos
-        cursor.close()
+def leer_alumno_bd(matricula):
+  try:
+    cursor=con.connection.cursor()
+    sql='select * from alumnos where matricula=(0)'.format(matricula)
+    cursor.execute(sql)
+    datos=cursor.fetchone()
+    if datos!=None:
+       alumno={'matricula':datos[0], 'nombre':datos[1], 'apaterno':datos[2], 'amaterno':datos[3], 'corrreo':datos[4]}
+
+    pass
+  except Exception as ex:
+    return jsonify({})
+  
+@app.route("/alumnos/<mat>", methods=['GET'])
+def leer_alumno(mat):
+    try:
+        alumno=leer_alumno_bd(mat)
+        if alumno!=None:
+           
+            return jsonify({'alumnos': alumno, 'mensaje': 'Lista de Alumnos', 'exito': True})
+
+        else:
+            return jsonify({'alumnos': alumno, 'mensaje': 'Lista de Alumnos', 'exito': True}) 
+               
+    except Exception as ex:
+        return jsonify({'message': "Error al conectarse a la base de datos {}". 
+                        format(ex), 'exito':False})
+
+
+@app.route("/alumnos", methods=['POST'])
+def registrar_alumnos():
+    try:
+        alumno=leer_alumno_bd(request.json['matricula'])
+        if alumno!=None:
+            return jsonify({'mensaje':'Aluno ya existe','exito':False})
+        else:
+
+            cursor = con.connection.cursor()
+            sql=''' INSERT INTO alumnnos (matricula, nombre, apaterno, amaterno,  correo) 
+                values ('{0}','{1}','{2}','{3}','{4}')  '''.format(request.json['matricula'],request.json['nombre'],request.json['apaterno'],request.json['amaterno'],request.json['correo']) ##los tress apostrofes sirven para texto de varias lineas 
+        cursor.execute(sql)
+        con.connection.commit()
+        # Mover el return fuera del for para que no termine en la primera iteración
+        return jsonify({'message':'Alumno Agregado', 'exito': True})
+
+    except Exception as ex:
+         return jsonify({'message': "Error al conectarse a la base de datos {}". 
+                        format(ex), 'exito':False})
+      
+
+
 
 @app.errorhandler(404)
 def pagina_no_encontrada(error):
